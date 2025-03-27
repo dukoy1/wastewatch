@@ -610,7 +610,6 @@
                                     <button type="button" class="waste-type-btn border p-2 rounded-lg hover:bg-green-100 text-xs md:text-sm" data-type="glass">🍷 Glass</button>
                                 </div>
                                 <input type="hidden" id="userSelectedWasteType" required>
-                                <div id="selectedTypes" class="flex flex-wrap gap-2 mt-2"></div>
                             </div>
 
                             <div class="mb-3 md:mb-4">
@@ -927,21 +926,11 @@
                 // Waste Type Selection
                 document.querySelectorAll('.waste-type-btn')?.forEach(btn => {
                     btn.addEventListener('click', function() {
-                        this.classList.toggle('bg-green-500');
-                        this.classList.toggle('text-white');
-                        
-                        // Update selected types
-                        const selectedButtons = document.querySelectorAll('.waste-type-btn.bg-green-500');
-                        const selectedTypes = Array.from(selectedButtons).map(btn => btn.dataset.type);
-                        document.getElementById('userSelectedWasteType').value = selectedTypes.join(',');
-                        
-                        // Update visual display of selected types
-                        const selectedTypesContainer = document.getElementById('selectedTypes');
-                        selectedTypesContainer.innerHTML = selectedTypes.map(type => `
-                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">
-                                ${type.charAt(0).toUpperCase() + type.slice(1)}
-                            </span>
-                        `).join('');
+                        document.querySelectorAll('.waste-type-btn').forEach(b => 
+                            b.classList.remove('bg-green-500', 'text-white')
+                        );
+                        this.classList.add('bg-green-500', 'text-white');
+                        document.getElementById('userSelectedWasteType').value = this.dataset.type;
                     });
                 });
 
@@ -1194,16 +1183,16 @@
             }
 
             submitUserWasteReport() {
-                const wasteTypes = document.getElementById('userSelectedWasteType').value.split(',');
+                const wasteType = document.getElementById('userSelectedWasteType').value;
                 const location = document.getElementById('userWasteLocation').value;
                 const description = document.getElementById('userWasteDescription').value;
                 const imageUpload = document.getElementById('userImageUpload').files[0];
 
-                if (!wasteTypes.length || !location) {
+                if (!wasteType || !location) {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Missing Information',
-                        text: 'Please select at least one waste type and fill in the location',
+                        text: 'Please fill in all required fields (marked with *)',
                         confirmButtonText: 'OK'
                     });
                     return;
@@ -1218,7 +1207,7 @@
                     const report = {
                         id: Date.now(),
                         username: this.currentUser.username,
-                        wasteType: wasteTypes.join(', '), // Join selected types with comma
+                        wasteType,
                         location,
                         description: description || 'No description provided',
                         status: 'Pending',
