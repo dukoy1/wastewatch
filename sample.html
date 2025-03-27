@@ -1,0 +1,2157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WasteWatch - Connecting Communities</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --primary-green: #2ecc71;
+            --secondary-green: #27ae60;
+            --background-light: #f4f6f7;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--background-light);
+        }
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        @media (max-width: 640px) {
+            .login-container {
+                margin: 20px;
+                padding: 15px;
+            }
+        }
+        .waste-type-btn {
+            transition: all 0.2s ease;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow: auto;
+            margin: 10px;
+        }
+        @media (min-width: 640px) {
+            .modal-content {
+                padding: 20px;
+                max-width: 80%;
+                margin: 20px;
+            }
+        }
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: red;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        /* Loading Animation Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ffffff;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s;
+        }
+
+        .loading-overlay.fade-out {
+            opacity: 0;
+        }
+
+        .loading-container {
+            text-align: center;
+        }
+
+        .recycle-animation {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .recycle-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid transparent;
+            border-top-color: #34D399;
+            border-radius: 50%;
+            animation: rotate 2s linear infinite;
+        }
+
+        .recycle-circle:nth-child(2) {
+            width: 80%;
+            height: 80%;
+            top: 10%;
+            left: 10%;
+            border-top-color: #059669;
+            animation-delay: 0.5s;
+        }
+
+        .recycle-circle:nth-child(3) {
+            width: 60%;
+            height: 60%;
+            top: 20%;
+            left: 20%;
+            border-top-color: #047857;
+            animation-delay: 1s;
+        }
+
+        .recycle-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            color: #059669;
+            animation: pulse 2s infinite;
+        }
+
+        .loading-text {
+            margin-top: 2rem;
+            font-size: 1.25rem;
+            color: #059669;
+            font-weight: 600;
+            text-align: center;
+            opacity: 0.9;
+            animation: fadeInOut 2s infinite;
+        }
+
+        .loading-subtext {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #6B7280;
+            text-align: center;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        @media (max-width: 640px) {
+            .recycle-animation {
+                width: 100px;
+                height: 100px;
+            }
+
+            .recycle-icon {
+                width: 32px;
+                height: 32px;
+            }
+
+            .loading-text {
+                font-size: 1.125rem;
+            }
+
+            .loading-subtext {
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Notification Dropdown Styles */
+        .notification-dropdown {
+            position: fixed;
+            right: 2rem;
+            top: 4rem;
+            width: 24rem;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            z-index: 50;
+            transform-origin: top right;
+            transition: all 0.2s ease-in-out;
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+
+        .notification-dropdown.show {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        .notification-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .notification-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .notification-action-btn {
+            color: #059669;
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+        }
+
+        .notification-action-btn:hover {
+            background-color: #f0fdf4;
+        }
+
+        .notification-list {
+            max-height: 24rem;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        .notification-item {
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .notification-item:hover {
+            background-color: #f9fafb;
+        }
+
+        .notification-item.unread {
+            background-color: #f0fdf4;
+        }
+
+        .notification-item.unread:hover {
+            background-color: #dcfce7;
+        }
+
+        .notification-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .notification-title {
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .notification-message {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .notification-time {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -0.25rem;
+            right: -0.25rem;
+            background-color: #ef4444;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0.375rem;
+            border: 2px solid white;
+        }
+
+        .notification-badge.hidden {
+            display: none;
+        }
+
+        @media (max-width: 640px) {
+            .notification-dropdown {
+                right: 1rem;
+                left: 1rem;
+                width: auto;
+                top: 4rem;
+            }
+        }
+
+        /* Alert Modal Styles */
+        .alert-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .alert-content {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            animation: slideIn 0.3s ease-in-out;
+        }
+
+        .alert-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .alert-icon.success {
+            background-color: #dcfce7;
+            color: #059669;
+        }
+
+        .alert-icon.reject {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .alert-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-message {
+            color: #4b5563;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-button {
+            background-color: #059669;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .alert-button:hover {
+            background-color: #047857;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Mobile Responsiveness Improvements */
+        @media (max-width: 640px) {
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .grid {
+                gap: 1rem;
+            }
+
+            .modal-content {
+                margin: 0.5rem;
+                padding: 1rem;
+            }
+
+            .notification-dropdown {
+                right: 0.5rem;
+                left: 0.5rem;
+                width: auto;
+                max-width: calc(100% - 1rem);
+            }
+
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .waste-type-btn {
+                padding: 0.5rem;
+                font-size: 0.75rem;
+            }
+
+            .action-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .action-buttons button {
+                flex: 1;
+                min-width: 80px;
+            }
+
+            .stats-card {
+                padding: 1rem;
+            }
+
+            .stats-card h3 {
+                font-size: 0.875rem;
+            }
+
+            .stats-card p {
+                font-size: 1.25rem;
+            }
+        }
+
+        /* SweetAlert2 Custom Styles */
+        .swal2-popup {
+            border-radius: 0.5rem;
+        }
+
+        .swal2-title {
+            color: #1f2937;
+            font-size: 1.25rem;
+        }
+
+        .swal2-content {
+            color: #4b5563;
+        }
+
+        .swal2-confirm {
+            background-color: #059669 !important;
+        }
+
+        .swal2-confirm:hover {
+            background-color: #047857 !important;
+        }
+
+        .swal2-timer-progress-bar {
+            background: #059669 !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Loading Animation -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-container">
+            <div class="recycle-animation">
+                <div class="recycle-circle"></div>
+                <div class="recycle-circle"></div>
+                <div class="recycle-circle"></div>
+                <svg class="recycle-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </div>
+            <div class="loading-text">
+                Making the world cleaner...
+            </div>
+            <div class="loading-subtext">
+                Loading WasteWatch
+            </div>
+        </div>
+    </div>
+    <!-- Login Page -->
+    <div id="loginPage" class="container">
+        <div class="login-container text-center">
+            <h1 class="text-3xl font-bold mb-6 text-green-700">🌍 WasteWatch</h1>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <input 
+                        type="text" 
+                        id="username" 
+                        placeholder="Username" 
+                        class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        required
+                    >
+                </div>
+                <div class="mb-4">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        placeholder="Password" 
+                        class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        required
+                    >
+                </div>
+                <div class="mb-4">
+                    <select id="userType" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button 
+                    type="submit" 
+                    class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition duration-200 transform hover:scale-105"
+                >
+                    Login
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Dashboard -->
+    <div id="userDashboard" class="hidden">
+        <nav class="bg-gradient-to-r from-green-600 to-green-500 text-white p-2 md:p-4 shadow-md">
+            <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
+                <h1 class="text-lg md:text-2xl font-bold">🌍 WasteWatch</h1>
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative">
+                        <button id="notificationBtn" class="bg-white text-green-600 p-2 rounded-full hover:bg-green-50 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            <div id="notificationBadge" class="notification-badge hidden">0</div>
+                        </button>
+                    </div>
+                    <div class="bg-white text-green-600 px-2 py-1 rounded-full font-medium text-sm">
+                        Points: <span id="userPoints">0</span>
+                    </div>
+                    <span class="text-sm">Welcome, <span id="userWelcomeName" class="font-semibold"></span></span>
+                    <button id="userLogoutBtn" class="bg-white text-green-600 px-2 py-1 rounded-full hover:bg-green-50 transition text-sm">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Notification Dropdown -->
+        <div id="notificationDropdown" class="notification-dropdown hidden">
+            <div class="notification-header">
+                <h3 class="notification-title">Notifications</h3>
+                <div class="notification-actions">
+                    <button id="markAllReadBtn" class="notification-action-btn">Mark all as read</button>
+                    <button id="clearNotificationsBtn" class="notification-action-btn">Clear all</button>
+                </div>
+            </div>
+            <div id="notificationList" class="notification-list">
+                <!-- Notifications will be populated here -->
+            </div>
+        </div>
+
+        <div class="container mx-auto mt-4 md:mt-6 px-2 md:px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <!-- Left Column -->
+                <div class="md:col-span-2 space-y-4 md:space-y-6">
+                    <!-- Waste Reporting Section -->
+                    <div class="bg-white rounded-xl md:rounded-2xl shadow-lg p-3 md:p-6">
+                        <h2 class="text-lg md:text-2xl font-bold mb-3 md:mb-4 text-green-700">Report Waste</h2>
+                        <form id="userWasteReportForm">
+                            <div class="mb-3 md:mb-4">
+                                <label class="block text-gray-700 mb-2 font-medium text-sm md:text-base">Waste Type <span class="text-red-500">*</span></label>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    <button type="button" class="waste-type-btn border p-2 rounded-lg hover:bg-green-100 text-xs md:text-sm" data-type="plastic">🥤 Plastic</button>
+                                    <button type="button" class="waste-type-btn border p-2 rounded-lg hover:bg-green-100 text-xs md:text-sm" data-type="electronic">💻 E-Waste</button>
+                                    <button type="button" class="waste-type-btn border p-2 rounded-lg hover:bg-green-100 text-xs md:text-sm" data-type="organic">🍂 Organic</button>
+                                    <button type="button" class="waste-type-btn border p-2 rounded-lg hover:bg-green-100 text-xs md:text-sm" data-type="paper">📄 Paper</button>
+                                    <button type="button" class="waste-type-btn border p-2 rounded-lg hover:bg-green-100 text-xs md:text-sm" data-type="metal">🔩 Metal</button>
+                                    <button type="button" class="waste-type-btn border p-2 rounded-lg hover:bg-green-100 text-xs md:text-sm" data-type="glass">🍷 Glass</button>
+                                </div>
+                                <input type="hidden" id="userSelectedWasteType" required>
+                                <div id="selectedTypes" class="flex flex-wrap gap-2 mt-2"></div>
+                            </div>
+
+                            <div class="mb-3 md:mb-4">
+                                <label class="block text-gray-700 mb-2 font-medium text-sm md:text-base">Location <span class="text-red-500">*</span></label>
+                                <input 
+                                    type="text" 
+                                    id="userWasteLocation" 
+                                    class="w-full p-2 md:p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm md:text-base"
+                                    placeholder="Enter specific location"
+                                    required
+                                >
+                            </div>
+
+                            <div class="mb-3 md:mb-4">
+                                <label class="block text-gray-700 mb-2 font-medium text-sm md:text-base">Description</label>
+                                <textarea 
+                                    id="userWasteDescription" 
+                                    class="w-full p-2 md:p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm md:text-base"
+                                    rows="3"
+                                    placeholder="Describe the waste and its impact"
+                                ></textarea>
+                            </div>
+
+                            <div class="mb-3 md:mb-4">
+                                <label class="block text-gray-700 mb-2 font-medium text-sm md:text-base">Upload Image</label>
+                                <input 
+                                    type="file" 
+                                    id="userImageUpload" 
+                                    class="w-full p-2 md:p-3 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs md:file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 text-xs md:text-sm"
+                                    accept="image/*"
+                                >
+                                <p class="text-xs text-gray-500 mt-1">Upload a clear photo of the waste (optional but recommended)</p>
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                class="w-full bg-green-600 text-white p-2 md:p-3 rounded-lg hover:bg-green-700 transition duration-200 transform hover:scale-105 text-sm md:text-base"
+                            >
+                                Submit Report (+10 pts)
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- User Reports Section -->
+                    <div class="bg-white rounded-xl md:rounded-2xl shadow-lg p-3 md:p-6">
+                        <div class="flex flex-wrap justify-between items-center mb-3 md:mb-4 gap-2">
+                            <h2 class="text-lg md:text-2xl font-bold text-green-700">My Reports</h2>
+                            <button id="refreshReportsBtn" class="bg-green-100 text-green-700 p-2 rounded-full hover:bg-green-200 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="userReportsContainer" class="space-y-3 md:space-y-4 max-h-[400px] md:max-h-[500px] overflow-y-auto pr-2">
+                            <!-- User's reports will be dynamically populated -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-4 md:space-y-6">
+                    <!-- Upcoming Cleanup Drives -->
+                    <div class="bg-white rounded-xl md:rounded-2xl shadow-lg p-3 md:p-6">
+                        <h2 class="text-lg md:text-2xl font-bold mb-3 md:mb-4 text-green-700">Upcoming Drives</h2>
+                        <div id="cleanupDrivesContainer" class="space-y-3 md:space-y-4">
+                            <!-- Cleanup drives will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Leaderboard -->
+                    <div class="bg-white rounded-xl md:rounded-2xl shadow-lg p-3 md:p-6">
+                        <h2 class="text-lg md:text-2xl font-bold mb-3 md:mb-4 text-green-700">Leaderboard</h2>
+                        <div id="leaderboardContainer" class="space-y-2 md:space-y-3">
+                            <!-- Leaderboard will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="hidden">
+        <nav class="bg-gradient-to-r from-green-600 to-green-500 text-white p-2 md:p-4 shadow-md">
+            <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
+                <h1 class="text-lg md:text-2xl font-bold">🌍 WasteWatch - Admin Portal</h1>
+                <div class="flex items-center space-x-2 md:space-x-4">
+                    <span class="text-xs md:text-sm">Welcome, <span id="adminWelcomeName" class="font-semibold"></span></span>
+                    <button id="adminLogoutBtn" class="bg-white text-green-600 px-2 py-1 rounded-full hover:bg-green-50 transition text-xs md:text-sm">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mx-auto mt-4 md:mt-6 px-2 md:px-4">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-6 mb-4 md:mb-6">
+                <div class="bg-green-50 p-3 md:p-6 rounded-xl shadow-lg text-center hover:shadow-xl transition">
+                    <h3 class="text-xs md:text-xl font-semibold mb-1 md:mb-2">Total Reports</h3>
+                    <p class="text-lg md:text-3xl font-bold text-green-700" id="adminTotalReports">0</p>
+                </div>
+                <div class="bg-green-50 p-3 md:p-6 rounded-xl shadow-lg text-center hover:shadow-xl transition">
+                    <h3 class="text-xs md:text-xl font-semibold mb-1 md:mb-2">Resolved Reports</h3>
+                    <p class="text-lg md:text-3xl font-bold text-green-700" id="adminResolvedReports">0</p>
+                </div>
+                <div class="bg-green-50 p-3 md:p-6 rounded-xl shadow-lg text-center hover:shadow-xl transition">
+                    <h3 class="text-xs md:text-xl font-semibold mb-1 md:mb-2">Active Drives</h3>
+                    <p class="text-lg md:text-3xl font-bold text-green-700" id="adminActiveDrives">0</p>
+                </div>
+                <div class="bg-green-50 p-3 md:p-6 rounded-xl shadow-lg text-center hover:shadow-xl transition">
+                    <h3 class="text-xs md:text-xl font-semibold mb-1 md:mb-2">Pending Reports</h3>
+                    <p class="text-lg md:text-3xl font-bold text-green-700" id="adminPendingReports">0</p>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                <!-- Reports Section -->
+                <div class="bg-white rounded-xl shadow-lg p-3 md:p-6">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 md:mb-4 gap-2">
+                        <h2 class="text-lg md:text-2xl font-bold text-green-700">Waste Management Reports</h2>
+                        <div class="flex space-x-1 md:space-x-2 overflow-x-auto pb-2">
+                            <button id="filterAllBtn" class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs md:text-sm font-medium whitespace-nowrap">All</button>
+                            <button id="filterPendingBtn" class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs md:text-sm font-medium whitespace-nowrap">Pending</button>
+                            <button id="filterResolvedBtn" class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs md:text-sm font-medium whitespace-nowrap">Resolved</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[600px]" id="adminReportsTable">
+                            <thead>
+                                <tr class="bg-green-100">
+                                    <th class="p-2 md:p-3 text-left text-xs md:text-sm">User</th>
+                                    <th class="p-2 md:p-3 text-left text-xs md:text-sm">Waste Type</th>
+                                    <th class="p-2 md:p-3 text-left text-xs md:text-sm">Location</th>
+                                    <th class="p-2 md:p-3 text-left text-xs md:text-sm">Date</th>
+                                    <th class="p-2 md:p-3 text-left text-xs md:text-sm">Status</th>
+                                    <th class="p-2 md:p-3 text-left text-xs md:text-sm">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminReportsTableBody">
+                                <!-- Dynamically populated reports -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Cleanup Drives Section -->
+                <div class="bg-white rounded-xl shadow-lg p-3 md:p-6">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 md:mb-4 gap-2">
+                        <h2 class="text-lg md:text-2xl font-bold text-green-700">Cleanup Drives</h2>
+                        <button id="addDriveBtn" class="bg-green-500 text-white px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-medium hover:bg-green-600 transition whitespace-nowrap">
+                            + Add Drive
+                        </button>
+                    </div>
+                    <div id="cleanupDrivesAdminContainer" class="space-y-3 md:space-y-4">
+                        <!-- Cleanup drives will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leaderboard Section -->
+            <div class="bg-white rounded-xl shadow-lg p-3 md:p-6 mb-4 md:mb-6">
+                <h2 class="text-lg md:text-2xl font-bold mb-3 md:mb-4 text-green-700">Top Contributors</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[600px]">
+                        <thead>
+                            <tr class="bg-green-100">
+                                <th class="p-2 md:p-3 text-left text-xs md:text-sm">Rank</th>
+                                <th class="p-2 md:p-3 text-left text-xs md:text-sm">User</th>
+                                <th class="p-2 md:p-3 text-left text-xs md:text-sm">Reports</th>
+                                <th class="p-2 md:p-3 text-left text-xs md:text-sm">Points</th>
+                                <th class="p-2 md:p-3 text-left text-xs md:text-sm">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminLeaderboardTable">
+                            <!-- Leaderboard will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Report Image</h3>
+                <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <img id="modalImage" src="" alt="Report Image" class="max-w-full max-h-[70vh]">
+            <div id="modalImageDetails" class="mt-4 text-sm text-gray-600"></div>
+        </div>
+    </div>
+
+    <!-- Add Drive Modal -->
+    <div id="addDriveModal" class="modal-overlay hidden">
+        <div class="modal-content w-full max-w-md">
+            <div class="flex justify-between items-center mb-3 md:mb-4">
+                <h3 class="text-lg font-bold">Schedule Cleanup Drive</h3>
+                <button id="closeDriveModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="addDriveForm">
+                <div class="mb-3 md:mb-4">
+                    <label class="block text-gray-700 mb-2 font-medium text-sm md:text-base">Drive Name <span class="text-red-500">*</span></label>
+                    <input 
+                        type="text" 
+                        id="driveName" 
+                        class="w-full p-2 md:p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm md:text-base"
+                        placeholder="Community Beach Cleanup"
+                        required
+                    >
+                </div>
+                <div class="mb-3 md:mb-4">
+                    <label class="block text-gray-700 mb-2 font-medium text-sm md:text-base">Location <span class="text-red-500">*</span></label>
+                    <input 
+                        type="text" 
+                        id="driveLocation" 
+                        class="w-full p-2 md:p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm md:text-base"
+                        placeholder="Main Beach, City Park"
+                        required
+                    >
+                </div>
+                <div class="mb-3 md:mb-4">
+                    <label class="block text-gray-700 mb-2 font-medium text-sm md:text-base">Date & Time <span class="text-red-500">*</span></label>
+                    <input 
+                        type="datetime-local" 
+                        id="driveDateTime" 
+                        class="w-full p-2 md:p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm md:text-base"
+                        required
+                    >
+                </div>
+                <div class="mb-3 md:mb-4">
+                    <label class="block text-gray-700 mb-2 font-medium text-sm md:text-base">Description</label>
+                    <textarea 
+                        id="driveDescription" 
+                        class="w-full p-2 md:p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm md:text-base"
+                        rows="3"
+                        placeholder="Describe the cleanup drive and what participants should bring"
+                    ></textarea>
+                </div>
+                <div class="mb-3 md:mb-4">
+                    <label class="block text-gray-700 mb-2 font-medium text-sm md:text-base">Points Reward</label>
+                    <input 
+                        type="number" 
+                        id="drivePoints" 
+                        class="w-full p-2 md:p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm md:text-base"
+                        placeholder="20"
+                        value="20"
+                        min="1"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">Points awarded to participants</p>
+                </div>
+                <button 
+                    type="submit" 
+                    class="w-full bg-green-600 text-white p-2 md:p-3 rounded-lg hover:bg-green-700 transition text-sm md:text-base"
+                >
+                    Schedule Cleanup Drive
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        class WasteWatchApp {
+            constructor() {
+                this.reports = JSON.parse(localStorage.getItem('wasteReports')) || [];
+                this.users = JSON.parse(localStorage.getItem('wasteWatchUsers')) || [
+                    { username: 'admin', password: 'admin123', type: 'admin', points: 0 },
+                    { username: 'user', password: 'user123', type: 'user', points: 0 }
+                ];
+                this.cleanupDrives = JSON.parse(localStorage.getItem('cleanupDrives')) || [];
+                this.notifications = JSON.parse(localStorage.getItem('notifications')) || {};
+                this.currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+                this.currentFilter = 'all';
+
+                this.initEventListeners();
+                this.checkSession();
+                this.checkForNewNotifications();
+            }
+
+            initEventListeners() {
+                // Login Form
+                document.getElementById('loginForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.login();
+                });
+
+                // User Logout
+                document.getElementById('userLogoutBtn')?.addEventListener('click', () => {
+                    this.logout();
+                });
+
+                // Admin Logout
+                document.getElementById('adminLogoutBtn')?.addEventListener('click', () => {
+                    this.logout();
+                });
+
+                // User Waste Report Form
+                document.getElementById('userWasteReportForm')?.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.submitUserWasteReport();
+                });
+
+                // Waste Type Selection
+                document.querySelectorAll('.waste-type-btn')?.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        this.classList.toggle('bg-green-500');
+                        this.classList.toggle('text-white');
+                        
+                        // Update selected types
+                        const selectedButtons = document.querySelectorAll('.waste-type-btn.bg-green-500');
+                        const selectedTypes = Array.from(selectedButtons).map(btn => btn.dataset.type);
+                        document.getElementById('userSelectedWasteType').value = selectedTypes.join(',');
+                        
+                        // Update visual display of selected types
+                        const selectedTypesContainer = document.getElementById('selectedTypes');
+                        selectedTypesContainer.innerHTML = selectedTypes.map(type => `
+                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">
+                                ${type.charAt(0).toUpperCase() + type.slice(1)}
+                            </span>
+                        `).join('');
+                    });
+                });
+
+                // Refresh Reports Button
+                document.getElementById('refreshReportsBtn')?.addEventListener('click', () => {
+                    this.renderUserReports();
+                    this.renderCleanupDrives();
+                    this.renderLeaderboard();
+                });
+
+                // Admin Filter Buttons
+                document.getElementById('filterAllBtn')?.addEventListener('click', () => {
+                    this.currentFilter = 'all';
+                    this.renderAdminReports();
+                });
+
+                document.getElementById('filterPendingBtn')?.addEventListener('click', () => {
+                    this.currentFilter = 'pending';
+                    this.renderAdminReports();
+                });
+
+                document.getElementById('filterResolvedBtn')?.addEventListener('click', () => {
+                    this.currentFilter = 'resolved';
+                    this.renderAdminReports();
+                });
+
+                // Modal Close Button
+                document.getElementById('closeModalBtn')?.addEventListener('click', () => {
+                    this.closeImageModal();
+                });
+
+                // Close modal when clicking outside
+                document.getElementById('imageModal')?.addEventListener('click', (e) => {
+                    if (e.target.id === 'imageModal') {
+                        this.closeImageModal();
+                    }
+                });
+
+                // Notification Button
+                document.getElementById('notificationBtn')?.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleNotificationDropdown();
+                });
+
+                // Mark all as read button
+                document.getElementById('markAllReadBtn')?.addEventListener('click', () => {
+                    this.markNotificationsAsRead();
+                });
+
+                // Close notification dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    const dropdown = document.getElementById('notificationDropdown');
+                    const notificationBtn = document.getElementById('notificationBtn');
+                    
+                    if (!e.target.closest('#notificationDropdown') && 
+                        !e.target.closest('#notificationBtn') && 
+                        dropdown && 
+                        !dropdown.classList.contains('hidden')) {
+                        this.toggleNotificationDropdown();
+                    }
+                });
+
+                // Add Drive Button
+                document.getElementById('addDriveBtn')?.addEventListener('click', () => {
+                    this.openAddDriveModal();
+                });
+
+                // Close Drive Modal Button
+                document.getElementById('closeDriveModalBtn')?.addEventListener('click', () => {
+                    this.closeAddDriveModal();
+                });
+
+                // Close drive modal when clicking outside
+                document.getElementById('addDriveModal')?.addEventListener('click', (e) => {
+                    if (e.target.id === 'addDriveModal') {
+                        this.closeAddDriveModal();
+                    }
+                });
+
+                // Add Drive Form
+                document.getElementById('addDriveForm')?.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addCleanupDrive();
+                });
+            }
+
+            checkSession() {
+                if (this.currentUser) {
+                    this.showDashboard(this.currentUser.type);
+                    
+                    // Update welcome message and points
+                    if (this.currentUser.type === 'user') {
+                        document.getElementById('userWelcomeName').textContent = this.currentUser.username;
+                        document.getElementById('userPoints').textContent = this.currentUser.points || 0;
+                        this.renderCleanupDrives();
+                        this.renderLeaderboard();
+                    } else {
+                        document.getElementById('adminWelcomeName').textContent = this.currentUser.username;
+                        this.renderAdminCleanupDrives();
+                        this.renderAdminLeaderboard();
+                    }
+                }
+            }
+
+            checkForNewNotifications() {
+                if (this.currentUser && this.currentUser.type === 'user') {
+                    const userNotifications = this.notifications[this.currentUser.username] || [];
+                    const unreadCount = userNotifications.filter(n => !n.read).length;
+                    
+                    const badge = document.getElementById('notificationBadge');
+                    if (unreadCount > 0) {
+                        badge.textContent = unreadCount;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            }
+
+            toggleNotificationDropdown() {
+                const dropdown = document.getElementById('notificationDropdown');
+                if (!dropdown) return;
+
+                dropdown.classList.toggle('hidden');
+                if (!dropdown.classList.contains('hidden')) {
+                    // Add show class after a small delay to trigger animation
+                    setTimeout(() => {
+                        dropdown.classList.add('show');
+                    }, 10);
+                    this.renderNotifications();
+                } else {
+                    dropdown.classList.remove('show');
+                }
+            }
+
+            renderNotifications() {
+                if (!this.currentUser) return;
+                
+                const container = document.getElementById('notificationList');
+                const userNotifications = this.notifications[this.currentUser.username] || [];
+                
+                if (userNotifications.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            <p class="text-gray-500 mt-2">No notifications</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Sort by date (newest first)
+                const sortedNotifications = [...userNotifications].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                container.innerHTML = sortedNotifications.map(notification => {
+                    const timeAgo = this.getTimeAgo(new Date(notification.timestamp));
+                    return `
+                        <div class="notification-item ${notification.read ? '' : 'unread'}">
+                            <div class="notification-content">
+                                <p class="notification-title">${notification.title}</p>
+                                <p class="notification-message">${notification.message}</p>
+                                <p class="notification-time">${timeAgo}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            getTimeAgo(date) {
+                const now = new Date();
+                const diffInSeconds = Math.floor((now - date) / 1000);
+                
+                if (diffInSeconds < 60) {
+                    return 'Just now';
+                } else if (diffInSeconds < 3600) {
+                    const minutes = Math.floor(diffInSeconds / 60);
+                    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+                } else if (diffInSeconds < 86400) {
+                    const hours = Math.floor(diffInSeconds / 3600);
+                    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+                } else if (diffInSeconds < 604800) {
+                    const days = Math.floor(diffInSeconds / 86400);
+                    return `${days} day${days > 1 ? 's' : ''} ago`;
+                } else {
+                    return date.toLocaleDateString();
+                }
+            }
+
+            login() {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const userType = document.getElementById('userType').value;
+
+                const user = this.users.find(u => 
+                    u.username === username && 
+                    u.password === password && 
+                    u.type === userType
+                );
+
+                if (user) {
+                    this.currentUser = user;
+                    localStorage.setItem('currentUser', JSON.stringify(user));
+                    this.showDashboard(userType);
+                    
+                    // Update welcome message and points
+                    if (userType === 'user') {
+                        document.getElementById('userWelcomeName').textContent = user.username;
+                        document.getElementById('userPoints').textContent = user.points || 0;
+                        this.renderCleanupDrives();
+                        this.renderLeaderboard();
+                    } else {
+                        document.getElementById('adminWelcomeName').textContent = user.username;
+                        this.renderAdminCleanupDrives();
+                        this.renderAdminLeaderboard();
+                    }
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Login Failed',
+                        text: 'Invalid credentials. Please try again.',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            }
+
+            logout() {
+                this.currentUser = null;
+                localStorage.removeItem('currentUser');
+                document.getElementById('loginPage').style.display = 'block';
+                document.getElementById('userDashboard').classList.add('hidden');
+                document.getElementById('adminDashboard').classList.add('hidden');
+                
+                // Reset login form
+                document.getElementById('loginForm').reset();
+            }
+
+            showDashboard(type) {
+                document.getElementById('loginPage').style.display = 'none';
+                
+                if (type === 'user') {
+                    document.getElementById('userDashboard').classList.remove('hidden');
+                    this.renderUserReports();
+                    this.checkForNewNotifications();
+                } else if (type === 'admin') {
+                    document.getElementById('adminDashboard').classList.remove('hidden');
+                    this.renderAdminReports();
+                }
+            }
+
+            submitUserWasteReport() {
+                const wasteTypes = document.getElementById('userSelectedWasteType').value.split(',');
+                const location = document.getElementById('userWasteLocation').value;
+                const description = document.getElementById('userWasteDescription').value;
+                const imageUpload = document.getElementById('userImageUpload').files[0];
+
+                if (!wasteTypes.length || !location) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Missing Information',
+                        text: 'Please select at least one waste type and fill in the location',
+                        confirmButtonText: 'OK'
+                    });
+                    return;
+                }
+
+                // Create a promise to handle image upload
+                const handleImageUpload = imageUpload 
+                    ? this.getImageDataUrl(imageUpload) 
+                    : Promise.resolve(null);
+
+                handleImageUpload.then(imageUrl => {
+                    const report = {
+                        id: Date.now(),
+                        username: this.currentUser.username,
+                        wasteType: wasteTypes.join(', '), // Join selected types with comma
+                        location,
+                        description: description || 'No description provided',
+                        status: 'Pending',
+                        timestamp: new Date().toISOString(),
+                        imageUrl
+                    };
+
+                    this.reports.push(report);
+                    localStorage.setItem('wasteReports', JSON.stringify(this.reports));
+
+                    // Add points for reporting
+                    this.addUserPoints(this.currentUser.username, 10);
+                    
+                    // Show success message
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Report Submitted!',
+                        text: 'Your report has been submitted successfully. You earned 10 points!',
+                        confirmButtonText: 'OK'
+                    });
+                    
+                    this.renderUserReports();
+                    this.renderAdminReports();
+                    this.renderLeaderboard();
+                    this.renderAdminLeaderboard();
+
+                    // Reset form
+                    document.getElementById('userWasteReportForm').reset();
+                    document.querySelectorAll('.waste-type-btn').forEach(b => 
+                        b.classList.remove('bg-green-500', 'text-white')
+                    );
+                }).catch(error => {
+                    console.error('Error uploading image:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Upload Error',
+                        text: 'There was an error processing your image. Please try again.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+            }
+
+            addUserPoints(username, points) {
+                const user = this.users.find(u => u.username === username);
+                if (user) {
+                    user.points = (user.points || 0) + points;
+                    localStorage.setItem('wasteWatchUsers', JSON.stringify(this.users));
+                    
+                    // Update points display if it's the current user
+                    if (this.currentUser && this.currentUser.username === username) {
+                        document.getElementById('userPoints').textContent = user.points;
+                    }
+                }
+            }
+
+            getImageDataUrl(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            renderUserReports() {
+                const container = document.getElementById('userReportsContainer');
+                if (!container) return;
+
+                container.innerHTML = '';
+                const userReports = this.reports
+                    .filter(r => r.username === this.currentUser.username)
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                if (userReports.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p class="text-gray-500 mt-2">No reports yet. Submit your first waste report!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                userReports.forEach(report => {
+                    const reportElement = document.createElement('div');
+                    reportElement.className = 'bg-green-50 p-4 rounded-lg hover:shadow-md transition';
+                    
+                    const date = new Date(report.timestamp);
+                    const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                    
+                    reportElement.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2">
+                                    <p class="font-bold text-green-700">${report.wasteType.toUpperCase()} Waste</p>
+                                    <span class="${
+                                        report.status === 'Resolved' 
+                                        ? 'text-green-600 bg-green-100' 
+                                        : 'text-yellow-600 bg-yellow-100'
+                                    } px-2 py-1 rounded-full text-xs">
+                                        ${report.status}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">Location: ${report.location}</p>
+                                <p class="text-xs text-gray-500 mt-1">${formattedDate}</p>
+                                <p class="text-sm mt-2">${report.description}</p>
+                            </div>
+                            ${report.imageUrl ? `
+                                <button class="view-image-btn ml-4 bg-green-100 text-green-700 p-2 rounded-full hover:bg-green-200 transition" 
+                                        data-id="${report.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            ` : ''}
+                        </div>
+                    `;
+                    container.appendChild(reportElement);
+
+                    // Add event listener for view image button
+                    if (report.imageUrl) {
+                        reportElement.querySelector('.view-image-btn')?.addEventListener('click', () => {
+                            this.showImageModal(report);
+                        });
+                    }
+                });
+            }
+
+            renderAdminReports() {
+                const tableBody = document.getElementById('adminReportsTableBody');
+                if (!tableBody) return;
+
+                tableBody.innerHTML = '';
+
+                // Update admin stats
+                document.getElementById('adminTotalReports').textContent = this.reports.length;
+                document.getElementById('adminResolvedReports').textContent = 
+                    this.reports.filter(r => r.status === 'Resolved').length;
+                document.getElementById('adminPendingReports').textContent = 
+                    this.reports.filter(r => r.status === 'Pending').length;
+
+                let filteredReports = [...this.reports];
+                
+                // Apply filter
+                if (this.currentFilter === 'pending') {
+                    filteredReports = filteredReports.filter(r => r.status === 'Pending');
+                } else if (this.currentFilter === 'resolved') {
+                    filteredReports = filteredReports.filter(r => r.status === 'Resolved');
+                }
+                
+                // Sort by date (newest first)
+                filteredReports.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                if (filteredReports.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-10">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p class="text-gray-500 mt-2">No reports found</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                filteredReports.forEach(report => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b hover:bg-gray-50';
+                    
+                    const date = new Date(report.timestamp);
+                    const formattedDate = date.toLocaleDateString();
+                    
+                    row.innerHTML = `
+                        <td class="p-3">${report.username}</td>
+                        <td class="p-3">${report.wasteType}</td>
+                        <td class="p-3">${report.location}</td>
+                        <td class="p-3">${formattedDate}</td>
+                        <td class="p-3">
+                            <span class="${
+                                report.status === 'Resolved' 
+                                ? 'text-green-600 bg-green-100' 
+                                : 'text-yellow-600 bg-yellow-100'
+                            } px-2 py-1 rounded-full text-xs">
+                                ${report.status}
+                            </span>
+                        </td>
+                        <td class="p-3">
+                            <div class="flex space-x-2">
+                                <button class="view-btn bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600 transition" 
+                                        data-id="${report.id}">
+                                    View
+                                </button>
+                                <button class="resolve-btn bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600 transition" 
+                                        data-id="${report.id}">
+                                    Resolve
+                                </button>
+                                <button class="delete-btn bg-red-500 text-white px-2 py-1 rounded-full hover:bg-red-600 transition" 
+                                        data-id="${report.id}">
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+
+                    // Add event listeners for buttons
+                    row.querySelector('.view-btn')?.addEventListener('click', () => {
+                        this.showImageModal(report);
+                    });
+
+                    row.querySelector('.resolve-btn')?.addEventListener('click', () => {
+                        this.resolveReport(report.id);
+                    });
+
+                    row.querySelector('.delete-btn')?.addEventListener('click', () => {
+                        if (confirm('Are you sure you want to delete this report?')) {
+                            this.deleteReport(report.id);
+                        }
+                    });
+                });
+            }
+
+            renderCleanupDrives() {
+                const container = document.getElementById('cleanupDrivesContainer');
+                if (!container) return;
+
+                container.innerHTML = '';
+                const now = new Date();
+                const upcomingDrives = this.cleanupDrives
+                    .filter(drive => new Date(drive.dateTime) > now)
+                    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+                if (upcomingDrives.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-gray-500">
+                            No upcoming cleanup drives
+                        </div>
+                    `;
+                    return;
+                }
+
+                upcomingDrives.forEach(drive => {
+                    const driveElement = document.createElement('div');
+                    driveElement.className = 'bg-green-50 p-4 rounded-lg hover:shadow-md transition';
+                    
+                    const driveDate = new Date(drive.dateTime);
+                    const formattedDate = driveDate.toLocaleDateString();
+                    const formattedTime = driveDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    const isPending = drive.pendingParticipants?.includes(this.currentUser.username);
+                    const isParticipant = drive.participants?.includes(this.currentUser.username);
+                    
+                    driveElement.innerHTML = `
+                        <h3 class="font-bold text-green-700">${drive.name}</h3>
+                        <p class="text-sm text-gray-600 mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            ${drive.location}
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            ${formattedDate} at ${formattedTime}
+                        </p>
+                        ${drive.description ? `<p class="text-sm mt-2">${drive.description}</p>` : ''}
+                        <div class="flex justify-between items-center mt-3">
+                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">
+                                ${drive.points} pts reward
+                            </span>
+                            ${isParticipant ? `
+                                <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">
+                                    ✓ Verified Participant
+                                </span>
+                            ` : isPending ? `
+                                <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs">
+                                    ⏳ Pending Verification
+                                </span>
+                            ` : `
+                                <button class="join-drive-btn bg-green-500 text-white px-3 py-1 rounded-full text-xs hover:bg-green-600 transition"
+                                        data-id="${drive.id}">
+                                    Join Drive
+                                </button>
+                            `}
+                        </div>
+                    `;
+                    container.appendChild(driveElement);
+
+                    // Add event listener for join drive button
+                    if (!isParticipant && !isPending) {
+                        driveElement.querySelector('.join-drive-btn')?.addEventListener('click', () => {
+                            this.joinCleanupDrive(drive.id);
+                        });
+                    }
+                });
+            }
+
+            renderAdminCleanupDrives() {
+                const container = document.getElementById('cleanupDrivesAdminContainer');
+                if (!container) return;
+
+                container.innerHTML = '';
+                const now = new Date();
+                
+                // Update active drives count
+                const activeDrives = this.cleanupDrives.filter(drive => new Date(drive.dateTime) > now).length;
+                document.getElementById('adminActiveDrives').textContent = activeDrives;
+
+                // Sort by date (upcoming first)
+                const sortedDrives = [...this.cleanupDrives].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+                if (sortedDrives.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-gray-500">
+                            No cleanup drives scheduled
+                        </div>
+                    `;
+                    return;
+                }
+
+                sortedDrives.forEach(drive => {
+                    const driveElement = document.createElement('div');
+                    driveElement.className = 'border-b pb-4 mb-4 last:border-0 last:pb-0 last:mb-0';
+                    
+                    const driveDate = new Date(drive.dateTime);
+                    const formattedDate = driveDate.toLocaleDateString();
+                    const formattedTime = driveDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const isPast = new Date(drive.dateTime) < now;
+                    
+                    driveElement.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold ${isPast ? 'text-gray-500' : 'text-green-700'}">${drive.name}</h3>
+                                <p class="text-sm text-gray-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    ${drive.location}
+                                </p>
+                                <p class="text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    ${formattedDate} at ${formattedTime}
+                                    ${isPast ? '<span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs ml-2">Completed</span>' : ''}
+                                </p>
+                                ${drive.description ? `<p class="text-sm mt-1">${drive.description}</p>` : ''}
+                                <div class="mt-2">
+                                    <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">
+                                        ${drive.participants?.length || 0} verified participants
+                                    </span>
+                                    ${drive.pendingParticipants?.length > 0 ? `
+                                        <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs ml-2">
+                                            ${drive.pendingParticipants.length} pending requests
+                                        </span>
+                                    ` : ''}
+                                    <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs ml-2">
+                                        ${drive.points} pts reward
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="view-participants-btn bg-green-100 text-green-700 p-1 rounded-full hover:bg-green-200 transition"
+                                        data-id="${drive.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                </button>
+                                <button class="delete-drive-btn bg-red-100 text-red-700 p-1 rounded-full hover:bg-red-200 transition"
+                                        data-id="${drive.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(driveElement);
+
+                    // Add event listeners
+                    driveElement.querySelector('.view-participants-btn')?.addEventListener('click', () => {
+                        this.viewDriveParticipants(drive.id);
+                    });
+
+                    driveElement.querySelector('.delete-drive-btn')?.addEventListener('click', () => {
+                        if (confirm('Are you sure you want to delete this cleanup drive?')) {
+                            this.deleteCleanupDrive(drive.id);
+                        }
+                    });
+                });
+            }
+
+            renderLeaderboard() {
+                const container = document.getElementById('leaderboardContainer');
+                if (!container) return;
+
+                // Calculate user points and report counts
+                const userStats = {};
+                
+                this.users.forEach(user => {
+                    if (user.type === 'user') {
+                        userStats[user.username] = {
+                            points: user.points || 0,
+                            reports: this.reports.filter(r => r.username === user.username).length
+                        };
+                    }
+                });
+
+                // Sort by points (descending)
+                const sortedUsers = Object.entries(userStats)
+                    .sort((a, b) => b[1].points - a[1].points)
+                    .slice(0, 5); // Top 5
+
+                if (sortedUsers.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-gray-500">
+                            No user data available
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = sortedUsers.map(([username, stats], index) => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center 
+                                ${index === 0 ? 'bg-yellow-100 text-yellow-600' : 
+                                  index === 1 ? 'bg-gray-200 text-gray-600' : 
+                                  index === 2 ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}">
+                                ${index + 1}
+                            </div>
+                            <div class="ml-3">
+                                <p class="font-medium">${username}</p>
+                                <p class="text-xs text-gray-500">${stats.reports} reports</p>
+                            </div>
+                        </div>
+                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm">
+                            ${stats.points} pts
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            renderAdminLeaderboard() {
+                const tableBody = document.getElementById('adminLeaderboardTable');
+                if (!tableBody) return;
+
+                // Calculate user points and report counts
+                const userStats = {};
+                
+                this.users.forEach(user => {
+                    if (user.type === 'user') {
+                        userStats[user.username] = {
+                            points: user.points || 0,
+                            reports: this.reports.filter(r => r.username === user.username).length,
+                            cleanups: this.cleanupDrives.reduce((count, drive) => {
+                                return count + (drive.participants?.includes(user.username) ? 1 : 0);
+                            }, 0)
+                        };
+                    }
+                });
+
+                // Sort by points (descending)
+                const sortedUsers = Object.entries(userStats)
+                    .sort((a, b) => b[1].points - a[1].points);
+
+                tableBody.innerHTML = sortedUsers.map(([username, stats], index) => `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3">${index + 1}</td>
+                        <td class="p-3 font-medium">${username}</td>
+                        <td class="p-3">${stats.reports}</td>
+                        <td class="p-3">${stats.points}</td>
+                        <td class="p-3">
+                            <button class="adjust-points-btn bg-green-100 text-green-700 px-2 py-1 rounded text-xs hover:bg-green-200 transition"
+                                    data-username="${username}">
+                                Adjust Points
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Add event listeners for adjust points buttons
+                document.querySelectorAll('.adjust-points-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const username = btn.dataset.username;
+                        const newPoints = prompt(`Enter new points for ${username}:`, userStats[username].points);
+                        
+                        if (newPoints !== null && !isNaN(newPoints)) {
+                            this.setUserPoints(username, parseInt(newPoints));
+                            this.renderAdminLeaderboard();
+                        }
+                    });
+                });
+            }
+
+            setUserPoints(username, points) {
+                const user = this.users.find(u => u.username === username);
+                if (user) {
+                    user.points = points;
+                    localStorage.setItem('wasteWatchUsers', JSON.stringify(this.users));
+                    
+                    // Update points display if it's the current user
+                    if (this.currentUser && this.currentUser.username === username) {
+                        document.getElementById('userPoints').textContent = points;
+                    }
+                }
+            }
+
+            showImageModal(report) {
+                const modal = document.getElementById('imageModal');
+                const modalImage = document.getElementById('modalImage');
+                const modalDetails = document.getElementById('modalImageDetails');
+                
+                if (report.imageUrl) {
+                    modalImage.src = report.imageUrl;
+                    modalImage.alt = `${report.wasteType} waste at ${report.location}`;
+                    
+                    const date = new Date(report.timestamp);
+                    const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                    
+                    modalDetails.innerHTML = `
+                        <p><strong>User:</strong> ${report.username}</p>
+                        <p><strong>Type:</strong> ${report.wasteType}</p>
+                        <p><strong>Location:</strong> ${report.location}</p>
+                        <p><strong>Date:</strong> ${formattedDate}</p>
+                        <p><strong>Status:</strong> <span class="${
+                            report.status === 'Resolved' ? 'text-green-600' : 'text-yellow-600'
+                        }">${report.status}</span></p>
+                        <p><strong>Description:</strong> ${report.description}</p>
+                    `;
+                    
+                    modal.classList.remove('hidden');
+                } else {
+                    alert('No image available for this report');
+                }
+            }
+
+            closeImageModal() {
+                document.getElementById('imageModal').classList.add('hidden');
+            }
+
+            openAddDriveModal() {
+                // Set default date/time to next Saturday at 10am
+                const nextSaturday = new Date();
+                nextSaturday.setDate(nextSaturday.getDate() + (6 - nextSaturday.getDay() + 7) % 7);
+                nextSaturday.setHours(10, 0, 0, 0);
+                
+                const formattedDate = nextSaturday.toISOString().slice(0, 16);
+                document.getElementById('driveDateTime').value = formattedDate;
+                
+                document.getElementById('addDriveModal').classList.remove('hidden');
+            }
+
+            closeAddDriveModal() {
+                document.getElementById('addDriveModal').classList.add('hidden');
+                document.getElementById('addDriveForm').reset();
+            }
+
+            addCleanupDrive() {
+                const name = document.getElementById('driveName').value;
+                const location = document.getElementById('driveLocation').value;
+                const dateTime = document.getElementById('driveDateTime').value;
+                const description = document.getElementById('driveDescription').value;
+                const points = parseInt(document.getElementById('drivePoints').value) || 20;
+
+                if (!name || !location || !dateTime) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+
+                const drive = {
+                    id: Date.now(),
+                    name,
+                    location,
+                    dateTime,
+                    description,
+                    points,
+                    participants: [],
+                    timestamp: new Date().toISOString()
+                };
+
+                this.cleanupDrives.push(drive);
+                localStorage.setItem('cleanupDrives', JSON.stringify(this.cleanupDrives));
+
+                // Notify all users about the new cleanup drive
+                this.users.forEach(user => {
+                    if (user.type === 'user') {
+                        this.addNotification(
+                            user.username,
+                            'New Cleanup Drive Scheduled!',
+                            `A new cleanup drive "${name}" has been scheduled for ${new Date(dateTime).toLocaleDateString()}. Join to earn ${points} points!`
+                        );
+                    }
+                });
+
+                alert('Cleanup drive scheduled successfully! Users have been notified.');
+                
+                this.closeAddDriveModal();
+                this.renderAdminCleanupDrives();
+                this.renderCleanupDrives();
+            }
+
+            joinCleanupDrive(driveId) {
+                if (!this.currentUser) return;
+                
+                const drive = this.cleanupDrives.find(d => d.id === driveId);
+                if (!drive) return;
+                
+                if (!drive.participants) {
+                    drive.participants = [];
+                }
+                
+                if (!drive.pendingParticipants) {
+                    drive.pendingParticipants = [];
+                }
+                
+                if (!drive.participants.includes(this.currentUser.username) && 
+                    !drive.pendingParticipants.includes(this.currentUser.username)) {
+                    drive.pendingParticipants.push(this.currentUser.username);
+                    localStorage.setItem('cleanupDrives', JSON.stringify(this.cleanupDrives));
+                    
+                    // Notify admin about the pending request
+                    const admin = this.users.find(u => u.type === 'admin');
+                    if (admin) {
+                        this.addNotification(
+                            admin.username,
+                            'New Drive Participation Request',
+                            `${this.currentUser.username} wants to join the cleanup drive "${drive.name}". Please verify their participation.`
+                        );
+                    }
+                    
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Request Sent',
+                        text: 'Your participation request has been sent to the admin for verification.',
+                        confirmButtonText: 'OK'
+                    });
+                    this.renderCleanupDrives();
+                    this.renderAdminCleanupDrives();
+                } else if (drive.pendingParticipants.includes(this.currentUser.username)) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Pending Request',
+                        text: 'Your participation request is pending admin verification.',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Already Joined',
+                        text: 'You have already joined this cleanup drive.',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            }
+
+            verifyDriveParticipation(driveId, username, verified) {
+                const drive = this.cleanupDrives.find(d => d.id === driveId);
+                if (!drive) return;
+                
+                if (verified) {
+                    // Remove from pending and add to participants
+                    drive.pendingParticipants = drive.pendingParticipants.filter(p => p !== username);
+                    if (!drive.participants.includes(username)) {
+                        drive.participants.push(username);
+                    }
+                    
+                    // Add points to user
+                    this.addUserPoints(username, drive.points);
+                    
+                    // Notify user about verification
+                    this.addNotification(
+                        username,
+                        'Drive Participation Verified!',
+                        `Your participation in the cleanup drive "${drive.name}" has been verified. You'll earn ${drive.points} points!`
+                    );
+
+                    // Show success alert
+                    this.showAlertModal(
+                        'Participation Verified!',
+                        `Successfully verified ${username}'s participation in "${drive.name}". They will receive ${drive.points} points.`,
+                        'success'
+                    );
+                } else {
+                    // Remove from pending
+                    drive.pendingParticipants = drive.pendingParticipants.filter(p => p !== username);
+                    
+                    // Notify user about rejection
+                    this.addNotification(
+                        username,
+                        'Drive Participation Rejected',
+                        `Your participation in the cleanup drive "${drive.name}" has been rejected.`
+                    );
+
+                    // Show rejection alert
+                    this.showAlertModal(
+                        'Participation Rejected',
+                        `Rejected ${username}'s participation request for "${drive.name}".`,
+                        'reject'
+                    );
+                }
+                
+                localStorage.setItem('cleanupDrives', JSON.stringify(this.cleanupDrives));
+                this.renderCleanupDrives();
+                this.renderAdminCleanupDrives();
+                this.renderLeaderboard();
+                this.renderAdminLeaderboard();
+            }
+
+            viewDriveParticipants(driveId) {
+                const drive = this.cleanupDrives.find(d => d.id === driveId);
+                if (!drive) return;
+                
+                const verifiedParticipants = drive.participants || [];
+                const pendingParticipants = drive.pendingParticipants || [];
+                
+                let message = 'Verified Participants:\n';
+                message += verifiedParticipants.length > 0 ? verifiedParticipants.join('\n') : 'None\n\n';
+                message += '\nPending Requests:\n';
+                message += pendingParticipants.length > 0 ? pendingParticipants.join('\n') : 'None';
+                
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold">Drive Participants</h3>
+                            <button class="close-modal-btn text-gray-500 hover:text-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-green-700 mb-2">Verified Participants</h4>
+                                ${verifiedParticipants.length > 0 ? 
+                                    `<ul class="list-disc list-inside">${verifiedParticipants.map(p => `<li>${p}</li>`).join('')}</ul>` : 
+                                    '<p class="text-gray-500">No verified participants</p>'}
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-yellow-700 mb-2">Pending Requests</h4>
+                                ${pendingParticipants.length > 0 ? 
+                                    `<ul class="list-disc list-inside">${pendingParticipants.map(p => `
+                                        <li class="flex justify-between items-center">
+                                            <span>${p}</span>
+                                            <div class="space-x-2">
+                                                <button class="verify-btn bg-green-100 text-green-700 px-2 py-1 rounded text-xs hover:bg-green-200 transition"
+                                                        data-username="${p}">
+                                                    Verify
+                                                </button>
+                                                <button class="reject-btn bg-red-100 text-red-700 px-2 py-1 rounded text-xs hover:bg-red-200 transition"
+                                                        data-username="${p}">
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        </li>
+                                    `).join('')}</ul>` : 
+                                    '<p class="text-gray-500">No pending requests</p>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // Add event listeners
+                modal.querySelector('.close-modal-btn')?.addEventListener('click', () => {
+                    modal.remove();
+                });
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+                
+                // Add event listeners for verify/reject buttons
+                modal.querySelectorAll('.verify-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const username = btn.dataset.username;
+                        this.verifyDriveParticipation(driveId, username, true);
+                        modal.remove();
+                    });
+                });
+                
+                modal.querySelectorAll('.reject-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const username = btn.dataset.username;
+                        this.verifyDriveParticipation(driveId, username, false);
+                        modal.remove();
+                    });
+                });
+            }
+
+            deleteCleanupDrive(driveId) {
+                Swal.fire({
+                    title: 'Delete Drive?',
+                    text: 'Are you sure you want to delete this cleanup drive?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#dc2626',
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.cleanupDrives = this.cleanupDrives.filter(d => d.id !== driveId);
+                        localStorage.setItem('cleanupDrives', JSON.stringify(this.cleanupDrives));
+                        
+                        this.renderAdminCleanupDrives();
+                        this.renderCleanupDrives();
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted!',
+                            text: 'The cleanup drive has been deleted.',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            }
+
+            resolveReport(reportId) {
+                const reportIndex = this.reports.findIndex(r => r.id === reportId);
+                if (reportIndex !== -1) {
+                    this.reports[reportIndex].status = 'Resolved';
+                    localStorage.setItem('wasteReports', JSON.stringify(this.reports));
+                    
+                    // Add points for resolving (if admin is resolving someone else's report)
+                    if (this.currentUser.type === 'admin' && 
+                        this.reports[reportIndex].username !== this.currentUser.username) {
+                        this.addUserPoints(this.reports[reportIndex].username, 5);
+                    }
+                    
+                    this.renderUserReports();
+                    this.renderAdminReports();
+                    this.renderLeaderboard();
+                    this.renderAdminLeaderboard();
+                }
+            }
+
+            deleteReport(reportId) {
+                Swal.fire({
+                    title: 'Delete Report?',
+                    text: 'Are you sure you want to delete this report?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#dc2626',
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.reports = this.reports.filter(r => r.id !== reportId);
+                        localStorage.setItem('wasteReports', JSON.stringify(this.reports));
+                        this.renderUserReports();
+                        this.renderAdminReports();
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted!',
+                            text: 'The report has been deleted.',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            }
+
+            addNotification(username, title, message) {
+                if (!this.notifications[username]) {
+                    this.notifications[username] = [];
+                }
+                
+                this.notifications[username].push({
+                    title,
+                    message,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+                
+                localStorage.setItem('notifications', JSON.stringify(this.notifications));
+                
+                // Update badge if it's the current user
+                if (this.currentUser && this.currentUser.username === username) {
+                    this.checkForNewNotifications();
+                }
+            }
+
+            markNotificationsAsRead() {
+                if (!this.currentUser) return;
+                
+                const userNotifications = this.notifications[this.currentUser.username] || [];
+                userNotifications.forEach(notification => {
+                    notification.read = true;
+                });
+                
+                this.notifications[this.currentUser.username] = userNotifications;
+                localStorage.setItem('notifications', JSON.stringify(this.notifications));
+                
+                this.checkForNewNotifications();
+            }
+
+            showAlertModal(title, message, type) {
+                Swal.fire({
+                    icon: type,
+                    title: title,
+                    text: message,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#059669',
+                    timer: 3000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
+            }
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            const wasteWatchApp = new WasteWatchApp();
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.classList.add('fade-out');
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+            }, 500);
+        });
+    </script>
+</body>
+</html>
