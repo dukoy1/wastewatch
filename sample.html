@@ -895,6 +895,64 @@
                 this.currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
                 this.currentFilter = 'all';
 
+                // Initialize rewards system
+                this.rewards = JSON.parse(localStorage.getItem('rewards')) || [
+                    {
+                        id: 1,
+                        name: "5kg Rice Pack",
+                        points: 100,
+                        description: "Premium quality rice pack",
+                        icon: "🌾",
+                        stock: 50,
+                        category: "food"
+                    },
+                    {
+                        id: 2,
+                        name: "10kg Rice Pack",
+                        points: 180,
+                        description: "Family size rice pack",
+                        icon: "🌾",
+                        stock: 30,
+                        category: "food"
+                    },
+                    {
+                        id: 3,
+                        name: "$5 Cash",
+                        points: 100,
+                        description: "Cash redemption",
+                        icon: "💵",
+                        stock: 999,
+                        category: "cash"
+                    },
+                    {
+                        id: 4,
+                        name: "$20 Grocery Voucher",
+                        points: 200,
+                        description: "Redeem at partner stores",
+                        icon: "🛒",
+                        stock: 25,
+                        category: "voucher"
+                    },
+                    {
+                        id: 5,
+                        name: "Food Package",
+                        points: 150,
+                        description: "Assorted food items",
+                        icon: "🥫",
+                        stock: 40,
+                        category: "food"
+                    }
+                ];
+                
+                this.redemptions = JSON.parse(localStorage.getItem('redemptions')) || [];
+                
+                // Save initial rewards if not exists
+                if (!localStorage.getItem('rewards')) {
+                    localStorage.setItem('rewards', JSON.stringify(this.rewards));
+                }
+
+                this.pointsHistory = JSON.parse(localStorage.getItem('pointsHistory')) || [];
+
                 this.initEventListeners();
                 this.checkSession();
                 this.checkForNewNotifications();
@@ -1027,6 +1085,7 @@
                         document.getElementById('userPoints').textContent = this.currentUser.points || 0;
                         this.renderCleanupDrives();
                         this.renderLeaderboard();
+                        this.initPointsModal();
                     } else {
                         document.getElementById('adminWelcomeName').textContent = this.currentUser.username;
                         this.renderAdminCleanupDrives();
@@ -1143,6 +1202,7 @@
                         document.getElementById('userPoints').textContent = user.points || 0;
                         this.renderCleanupDrives();
                         this.renderLeaderboard();
+                        this.initPointsModal();
                     } else {
                         document.getElementById('adminWelcomeName').textContent = user.username;
                         this.renderAdminCleanupDrives();
@@ -1250,11 +1310,24 @@
                 });
             }
 
-            addUserPoints(username, points) {
+            addUserPoints(username, points, description = 'Points earned') {
                 const user = this.users.find(u => u.username === username);
                 if (user) {
                     user.points = (user.points || 0) + points;
+                    
+                    // Add to points history
+                    this.pointsHistory.push({
+                        id: Date.now(),
+                        userId: username,
+                        points: points,
+                        type: 'earned',
+                        description: description,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    // Save to localStorage
                     localStorage.setItem('wasteWatchUsers', JSON.stringify(this.users));
+                    localStorage.setItem('pointsHistory', JSON.stringify(this.pointsHistory));
                     
                     // Update points display if it's the current user
                     if (this.currentUser && this.currentUser.username === username) {
@@ -2129,6 +2202,329 @@
                     timerProgressBar: true,
                     showConfirmButton: false
                 });
+            }
+
+            initPointsModal() {
+                // Add points modal HTML to the body
+                const modalHtml = `
+                    <div id="pointsModal" class="modal-overlay hidden">
+                        <div class="modal-content w-full max-w-4xl">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold text-green-700">Points & Rewards</h3>
+                                <button id="closePointsModalBtn" class="text-gray-500 hover:text-gray-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Points Overview -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div class="bg-green-50 p-4 rounded-lg text-center">
+                                    <h4 class="text-sm text-gray-600 mb-1">Available Points</h4>
+                                    <p class="text-2xl font-bold text-green-700" id="modalAvailablePoints">0</p>
+                                </div>
+                                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                                    <h4 class="text-sm text-gray-600 mb-1">Total Earned</h4>
+                                    <p class="text-2xl font-bold text-blue-700" id="modalTotalEarned">0</p>
+                                </div>
+                                <div class="bg-purple-50 p-4 rounded-lg text-center">
+                                    <h4 class="text-sm text-gray-600 mb-1">Total Redeemed</h4>
+                                    <p class="text-2xl font-bold text-purple-700" id="modalTotalRedeemed">0</p>
+                                </div>
+                            </div>
+
+                            <!-- Tabs -->
+                            <div class="mb-4 border-b">
+                                <div class="flex space-x-4">
+                                    <button class="points-tab px-4 py-2 border-b-2 border-green-600 text-green-600 font-medium" data-tab="rewards">
+                                        Available Rewards
+                                    </button>
+                                    <button class="points-tab px-4 py-2 border-b-2 border-transparent hover:text-green-600" data-tab="history">
+                                        Points History
+                                    </button>
+                                    <button class="points-tab px-4 py-2 border-b-2 border-transparent hover:text-green-600" data-tab="redeemed">
+                                        My Redemptions
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Content Sections -->
+                            <div class="tab-content" id="rewardsTab">
+                                <!-- Rewards Filter -->
+                                <div class="flex space-x-2 mb-4">
+                                    <button class="reward-filter-btn bg-green-600 text-white px-3 py-1 rounded-full text-sm" data-category="all">All</button>
+                                    <button class="reward-filter-btn bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm" data-category="food">Food</button>
+                                    <button class="reward-filter-btn bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm" data-category="cash">Cash</button>
+                                    <button class="reward-filter-btn bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm" data-category="voucher">Vouchers</button>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="modalRewardsContainer">
+                                    <!-- Rewards will be populated here -->
+                                </div>
+                            </div>
+
+                            <div class="tab-content hidden" id="historyTab">
+                                <div class="bg-white rounded-lg shadow">
+                                    <div class="divide-y max-h-[400px] overflow-y-auto" id="pointsHistoryList">
+                                        <!-- Points history will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-content hidden" id="redeemedTab">
+                                <div class="bg-white rounded-lg shadow">
+                                    <div class="divide-y max-h-[400px] overflow-y-auto" id="redeemedItemsList">
+                                        <!-- Redeemed items will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Help Section -->
+                            <div class="mt-6 bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-semibold mb-2">How to Earn Points</h4>
+                                <ul class="text-sm space-y-2">
+                                    <li class="flex items-center">
+                                        <svg class="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Submit waste reports (+10 points)
+                                    </li>
+                                    <li class="flex items-center">
+                                        <svg class="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Participate in cleanup drives (+20 points)
+                                    </li>
+                                    <li class="flex items-center">
+                                        <svg class="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Get reports resolved (+5 points)
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+                // Add click event to points display
+                const pointsDisplay = document.querySelector('.bg-white.text-green-600.px-2.py-1.rounded-full');
+                if (pointsDisplay) {
+                    pointsDisplay.style.cursor = 'pointer';
+                    pointsDisplay.title = 'Click to view rewards and points history';
+                    pointsDisplay.addEventListener('click', () => this.showPointsModal());
+                }
+
+                // Add event listeners
+                this.initPointsModalEventListeners();
+            }
+
+            initPointsModalEventListeners() {
+                // Close button
+                document.getElementById('closePointsModalBtn')?.addEventListener('click', () => {
+                    document.getElementById('pointsModal').classList.add('hidden');
+                });
+
+                // Close on outside click
+                document.getElementById('pointsModal')?.addEventListener('click', (e) => {
+                    if (e.target.id === 'pointsModal') {
+                        document.getElementById('pointsModal').classList.add('hidden');
+                    }
+                });
+
+                // Tab switching
+                document.querySelectorAll('.points-tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        // Update tab styles
+                        document.querySelectorAll('.points-tab').forEach(t => {
+                            t.classList.remove('border-green-600', 'text-green-600');
+                            t.classList.add('border-transparent');
+                        });
+                        e.target.classList.add('border-green-600', 'text-green-600');
+                        e.target.classList.remove('border-transparent');
+
+                        // Show/hide content
+                        document.querySelectorAll('.tab-content').forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                        document.getElementById(`${e.target.dataset.tab}Tab`).classList.remove('hidden');
+                    });
+                });
+
+                // Reward category filters
+                document.querySelectorAll('.reward-filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.reward-filter-btn').forEach(b => {
+                            b.classList.remove('bg-green-600', 'text-white');
+                            b.classList.add('bg-green-100', 'text-green-700');
+                        });
+                        e.target.classList.remove('bg-green-100', 'text-green-700');
+                        e.target.classList.add('bg-green-600', 'text-white');
+                        this.renderModalRewards(e.target.dataset.category);
+                    });
+                });
+            }
+
+            showPointsModal() {
+                try {
+                    const modal = document.getElementById('pointsModal');
+                    if (!modal || !this.currentUser) return;
+
+                    // Update points statistics
+                    document.getElementById('modalAvailablePoints').textContent = this.currentUser.points || 0;
+                    
+                    // Calculate totals
+                    const totalEarned = this.pointsHistory
+                        .filter(h => h.userId === this.currentUser.username && h.type === 'earned')
+                        .reduce((sum, h) => sum + h.points, 0);
+                    
+                    const totalRedeemed = this.pointsHistory
+                        .filter(h => h.userId === this.currentUser.username && h.type === 'redeemed')
+                        .reduce((sum, h) => sum + h.points, 0);
+
+                    document.getElementById('modalTotalEarned').textContent = totalEarned;
+                    document.getElementById('modalTotalRedeemed').textContent = totalRedeemed;
+
+                    // Render initial content
+                    this.renderModalRewards('all');
+                    this.renderPointsHistory();
+                    this.renderRedeemedItems();
+
+                    modal.classList.remove('hidden');
+                } catch (error) {
+                    console.error('Error showing points modal:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'There was an error showing your points details. Please try again.',
+                    });
+                }
+            }
+
+            renderModalRewards(category = 'all') {
+                const container = document.getElementById('modalRewardsContainer');
+                if (!container || !this.currentUser) return;
+
+                let filteredRewards = this.rewards;
+                if (category !== 'all') {
+                    filteredRewards = this.rewards.filter(r => r.category === category);
+                }
+
+                container.innerHTML = filteredRewards.map(reward => `
+                    <div class="bg-white p-4 rounded-lg shadow hover:shadow-md transition">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-4xl">${reward.icon}</span>
+                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm font-medium">
+                                ${reward.points} points
+                            </span>
+                        </div>
+                        <h3 class="font-bold text-green-700 mb-1">${reward.name}</h3>
+                        <p class="text-sm text-gray-600 mb-2">${reward.description}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500">Stock: ${reward.stock}</span>
+                            <button 
+                                onclick="wasteWatchApp.showRedeemModal(${reward.id})"
+                                class="bg-green-600 text-white px-4 py-1 rounded-full text-sm hover:bg-green-700 transition"
+                                ${(this.currentUser?.points < reward.points || reward.stock <= 0) ? 'disabled' : ''}
+                                style="${(this.currentUser?.points < reward.points || reward.stock <= 0) ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
+                            >
+                                ${reward.stock <= 0 ? 'Out of Stock' : 
+                                  this.currentUser?.points < reward.points ? 'Insufficient Points' : 
+                                  'Redeem'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderPointsHistory() {
+                const container = document.getElementById('pointsHistoryList');
+                if (!container || !this.currentUser) return;
+
+                const userHistory = this.pointsHistory
+                    .filter(h => h.userId === this.currentUser.username)
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                if (userHistory.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-4 text-center text-gray-500">
+                            No points activity yet. Start earning points by submitting reports and participating in cleanup drives!
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = userHistory.map(history => `
+                    <div class="p-4 hover:bg-gray-50">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-medium ${history.type === 'earned' ? 'text-green-600' : 'text-purple-600'}">
+                                    ${history.type === 'earned' ? '+' : '-'}${history.points} points
+                                </p>
+                                <p class="text-sm text-gray-600">${history.description}</p>
+                            </div>
+                            <span class="text-xs text-gray-500">
+                                ${this.formatDate(history.timestamp)}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderRedeemedItems() {
+                const container = document.getElementById('redeemedItemsList');
+                if (!container || !this.currentUser) return;
+
+                const redeemedItems = this.redemptions
+                    .filter(r => r.userId === this.currentUser.username)
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                if (redeemedItems.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-gray-500">
+                            No redemptions yet. Start redeeming your points!
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = redeemedItems.map(item => `
+                    <div class="bg-white p-4 rounded-lg shadow hover:shadow-md transition">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-4xl">${item.rewardIcon}</span>
+                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm font-medium">
+                                ${item.rewardName}
+                            </span>
+                        </div>
+                        <h3 class="font-bold text-green-700 mb-1">${item.rewardName}</h3>
+                        <p class="text-sm text-gray-600 mb-2">${item.rewardDescription}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500">Redeemed on: ${this.formatDate(item.timestamp)}</span>
+                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm font-medium">
+                                ${item.points} points
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diff = now - date;
+                
+                if (diff < 1000 * 60) { // Less than 1 minute
+                    return 'Just now';
+                } else if (diff < 1000 * 60 * 60) { // Less than 1 hour
+                    const minutes = Math.floor(diff / (1000 * 60));
+                    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+                } else if (diff < 1000 * 60 * 60 * 24) { // Less than 24 hours
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+                } else {
+                    return date.toLocaleDateString();
+                }
             }
         }
 
